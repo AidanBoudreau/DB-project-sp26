@@ -60,7 +60,7 @@ def add_customer(new_customer: Customer = None):
     # get customer first & last name
     first_last = new_customer.name.split(" ", 1)
     c_first_name = first_last[0]
-    if len(first_last>1):
+    if len(first_last)>1:
         c_last_name = first_last[1]
     else:
         c_last_name = ""
@@ -69,7 +69,7 @@ def add_customer(new_customer: Customer = None):
     tokens = new_customer.address.split(", ")
     street = tokens[0].split(" ", 1)
     ca_street_number = street[0]
-    if len(first_last>1):
+    if len(first_last)>1:
         ca_street_name = street[1]
     else:
         ca_street_name = ""
@@ -82,7 +82,7 @@ def add_customer(new_customer: Customer = None):
     params = (c_customer_sk, new_customer.customer_id, c_first_name, c_last_name, new_customer.email, ca_address_sk)
     cur.execute(query, params)
 
-    query = "INSERT INTO customer_address VALUES (?, ?, ?, ?, ?)"
+    query = "INSERT INTO customer_address VALUES (?, ?, ?, ?, ?, ?)"
     params = (ca_address_sk, ca_street_number, ca_street_name, ca_city, ca_state, ca_zip)
     cur.execute(query, params)
 
@@ -140,25 +140,14 @@ def get_filtered_items(filter_attributes: Item = None,
     """
     query = "SELECT * FROM Item"
     params = []
-    conditions = []
 
     # append filtering conditions and params to fill "?" during cur.execute
-    if filter_attributes is not None:
-        if filter_attributes.item_id is not None:
-            conditions.append("i_item_id = ?")
+    if filter_attributes is not None and filter_attributes.item_id is not None:
+            query = query + " WHERE i_item_id = ?"
             params.append(filter_attributes.item_id)
-    
-    # makes query "SELECT * FROM Item WHERE id=A AND brand=B AND ..."
-    if conditions:
-        query = query + " WHERE "
-        for i in range(len(conditions)):
-            query = query + conditions[i]
-            if i < len(conditions) - 1:
-                query = query + " AND "
-    
     cur.execute(query, params)
 
-    # create items from executed query rows & columns in schema
+    # create items (Data Model) from executed query rows & columns in schema
     items = []
     for row in cur:
         items.append(Item(item_id       = row[1], 
@@ -176,7 +165,22 @@ def get_filtered_customers(filter_attributes: Customer = None, use_patterns: boo
     """
     Returns a list of Customer objects matching the filters.
     """
-    raise NotImplementedError("you must implement this function")
+    query = "SELECT Customer.c_customer_id, Customer.c_first_name, Customer.c_last_name, customer_address.ca_street_number, customer_address.ca_street_name, customer_address.ca_city, customer_address.ca_state, customer_address.ca_zip, Customer.c_email_address From Customer" \
+    " JOIN customer_address ON Customer.c_current_addr_sk = customer_address.ca_address_sk"
+    params = []
+
+    if filter_attributes is not None and filter_attributes.customer_id is not None:
+        query = query + " WHERE Customer.c_customer_id = ?"
+        params.append(filter_attributes.customer_id) 
+
+    cur.execute(query, params)
+
+    customers=[]
+    for row in cur:
+        name = row[1] + " " + row[2]
+        address = row[3] + " " + row[4] + ", " + row[5] + ", " + row[6] + ", " + row[7]
+        customers.append(Customer(customer_id=row[0], name=name, address=address, email=row[8]))
+    return customers
 
 
 def get_filtered_rentals(filter_attributes: Rental = None,
