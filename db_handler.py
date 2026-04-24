@@ -69,7 +69,7 @@ def add_customer(new_customer: Customer = None):
     tokens = new_customer.address.split(", ")
     street = tokens[0].split(" ", 1)
     ca_street_number = street[0]
-    if len(first_last)>1:
+    if len(street)>1:
         ca_street_name = street[1]
     else:
         ca_street_name = ""
@@ -91,7 +91,69 @@ def edit_customer(original_customer_id: str = None, new_customer: Customer = Non
     original_customer_id - A string containing the customer id for the customer to be edited.
     new_customer - A Customer object containing attributes to update. If an attribute is None, it should not be altered.
     """
-    raise NotImplementedError("you must implement this function")
+    customer_changes = []
+    params_customer_changes = []
+    address_changes = []
+    params_address_changes = []
+    
+    # changing customer id
+    if new_customer.customer_id is not None:
+        customer_changes.append("c_customer_id = ?")
+        params_customer_changes.append(new_customer.customer_id)
+
+    # changing customer name
+    if new_customer.name is not None:\
+        # tokenize name, append name change and params respectively
+        first_last = new_customer.name.split(" ", 1)
+        first_name = first_last[0]
+        if len(first_last)>1:
+            last_name = first_last[1]
+        else:
+            last_name = ""
+        customer_changes.append("c_first_name = ?")
+        params_customer_changes.append(first_name)
+        customer_changes.append("c_last_name = ?")
+        params_customer_changes.append(last_name)
+        
+    # changing customer address
+    if new_customer.address is not None:
+        # tokenize address, append address change and params respectively
+        tokens = new_customer.address.split(", ")
+        street = tokens[0].split(" ", 1)
+        street_number = street[0]
+        if len(street)>1:
+            street_name = street[1]
+        else:
+            street_name = ""
+        city = tokens[1]
+        state_zip = tokens[2].split(" ")
+        state = state_zip[0]
+        zip = state_zip[1]
+        address_changes.extend(["ca_street_number = ?", "ca_street_name = ?", "ca_city = ?", "ca_state = ?", "ca_zip = ?"])
+        params_address_changes.extend([street_number, street_name, city, state, zip])
+
+    # changing customer email
+    if new_customer.email is not None:
+        customer_changes.append("c_email_address = ?")
+        params_customer_changes.append(new_customer.email)
+
+    # UPDATE Customer SET c_customer_id, c_first_name, etc WHERE c_customer_id = original_customer_id
+    if customer_changes:
+        query = "UPDATE Customer SET "
+        for i in range(len(customer_changes)-1):
+            query = query + customer_changes[i] + ", "
+        query = query + customer_changes[-1] + " WHERE c_customer_id = ?"
+        params_customer_changes.append(original_customer_id)
+        cur.execute(query, params_customer_changes)
+    
+    # UPDATE customer_address SET ca_street_number, ca_street_name, etc WHERE ca_address_sk = (SELECT c_current_addr_sk FROM Customer WHERE c_customer_id = original_customer_id)
+    if address_changes:
+        query = "UPDATE customer_address SET "
+        for i in range(len(address_changes)-1):
+            query = query + address_changes[i] + ", "
+        query = query + address_changes[-1] + " WHERE ca_address_sk = (SELECT c_current_addr_sk FROM Customer WHERE c_customer_id = ?)"
+        params_address_changes.append(original_customer_id)
+        cur.execute(query, params_address_changes)
 
 
 def rent_item(item_id: str = None, customer_id: str = None):
