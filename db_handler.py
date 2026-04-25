@@ -181,7 +181,27 @@ def return_item(item_id: str = None, customer_id: str = None):
     """
     Moves a rental from rental to rental_history with return_date = today.
     """
-    raise NotImplementedError("you must implement this function")
+    # get rental_date and due_date from primary keys (item_id, customer_id)
+    query = "SELECT rental_date, due_date FROM rental WHERE item_id = ? AND customer_id = ?"
+    params = (item_id, customer_id)
+    cur.execute(query, params)
+    
+    for row in cur:
+        rental_date = row[0]
+        due_date = row[1]
+
+    # get return date from todays date    
+    return_date = date.today()
+    
+    # Insert data into rental history
+    query = "INSERT INTO rental_history VALUES (?, ?, ?, ?, ?)"
+    params = (item_id, customer_id, rental_date, due_date, return_date)
+    cur.execute(query, params)
+
+    # Remove data from rental
+    query = "DELETE FROM rental WHERE item_id = ? AND customer_id = ?"
+    params = (item_id, customer_id)
+    cur.execute(query, params)
 
 
 def grant_extension(item_id: str = None, customer_id: str = None):
